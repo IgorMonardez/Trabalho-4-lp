@@ -1,12 +1,18 @@
 module Main where
 import Data.Char ()
 import System.IO ()
-import Distribution.ModuleName (main)
 import Distribution.Simple (UserHooks(hookedPrograms))
 
 --tipo Data e DataComemorativa
 type Data = (Int,Int,Int)
-type DataComemorativa = ([Char],Bool,Bool,Int,Int)
+
+data DataComemorativa = Comemorativa { dataNome :: [Char],
+                                       dataFeriado :: Bool,
+                                       dataFeriadoMundial :: Bool,
+                                       dataDia :: Int,
+                                       dataMes :: Int
+                                    }deriving(Show)
+
 type DatasComemorativas = [DataComemorativa]
 
 dia :: Data -> Int
@@ -18,13 +24,17 @@ mes (_,m,_) = m
 ano :: Data-> Int
 ano (_,_,a) = a
 
-nome :: DataComemorativa -> [Char]
-nome (n,_,_,_,_) = n
 
-feriado :: DataComemorativa -> Bool
-feriado (_,f,_,_,_) = f
+adicionaDia :: Data -> Int -> Data
 
-compara :: Data -> Data -> Int 
+adicionaDia (d,m,a) qtd = (mod (d + qtd) 30,m + mod(div (d + qtd) 30) 12,a + div (m + div (d+qtd) 30) 12)
+adicionaMes :: Data -> Int -> Data
+adicionaMes (d,m,a) qtd = (d,mod (m + qtd) 12,a + div (m+qtd) 12)
+adicionaAno :: Data -> Int -> Data
+adicionaAno (d,m,a) qtd = (d,m,a + qtd)
+
+
+compara :: Data -> Data -> Int
 compara d1 d2
     |ano d1 > ano d2 = 1
     |ano d2 > ano d1 = -1
@@ -34,36 +44,51 @@ compara d1 d2
     |dia d2 > dia d1 = -1
     |otherwise = 0
 
-toString :: Data -> [Char]
-toString d = show (dia d) + "/" + show (mes d) + "/" + show (ano d)
+comparaDataComemorativa :: Data -> DataComemorativa -> Int
+comparaDataComemorativa (d,m,a) dataComemorativa
+    |m > dataMes dataComemorativa = 1
+    |dataMes dataComemorativa > m = -1
+    |d > dataDia dataComemorativa = 1
+    |dataDia dataComemorativa > d = -1
+    |otherwise = 0
+
+strData :: Data -> String
+strData d = show (dia d) ++ "/" ++ show (mes d) ++ "/" ++ show (ano d)
 
 verificaContato :: String -> DatasComemorativas -> Bool
-verificaContato nomeDataComemorativa [] = False 
+verificaContato nomeDataComemorativa [] = False
 verificaContato nomeDataComemorativa datasComemorativas
-    |nomeDataComemorativa == nome (head datasComemorativas) = True
+    |nomeDataComemorativa == dataNome (head datasComemorativas) = True
     |otherwise = verificaContato nomeDataComemorativa (tail datasComemorativas)
 
 alterar :: DataComemorativa -> DatasComemorativas -> DatasComemorativas
 alterar dataComemorativa [] = []
 alterar dataComemorativa datasComemorativas
-    | nome dataComemorativa == nome (head datasComemorativas) = dataComemorativa : tail datasComemorativas
+    | dataNome dataComemorativa == dataNome (head datasComemorativas) = dataComemorativa : tail datasComemorativas
     | otherwise = head datasComemorativas : alterar dataComemorativa (tail datasComemorativas)
 
 inserir ::DataComemorativa -> DatasComemorativas -> DatasComemorativas
 inserir dataComemorativa [] = [dataComemorativa]
 inserir dataComemorativa datasComemorativas
-    |verificaContato (nome dataComemorativa) datasComemorativas = alterar dataComemorativa datasComemorativas
+    |verificaContato (dataNome dataComemorativa) datasComemorativas = alterar dataComemorativa datasComemorativas
     |otherwise = datasComemorativas ++ [dataComemorativa]
 
 remover :: [Char] -> DatasComemorativas -> DatasComemorativas
 remover nomeDataComemorativa [] = []
 remover nomeDataComemorativa datasComemorativas
-    | datasComemorativas == nome(head datasComemorativas) =  tail datasComemorativas
+    | nomeDataComemorativa == dataNome (head datasComemorativas) =  tail datasComemorativas
     | otherwise = head datasComemorativas : remover nomeDataComemorativa (tail datasComemorativas)
 
-horasNaoTrabalhadas :: DatasComemorativas -> Int 
+horasNaoTrabalhadas :: DatasComemorativas -> Int
 horasNaoTrabalhadas [] = 0
 horasNaoTrabalhadas datasComemorativas
-    |feriado (head datasComemorativas) = 1 + horasNaoTrabalhadas (tail datasComemorativas)
+    |dataFeriado (head datasComemorativas) = 8 + horasNaoTrabalhadas (tail datasComemorativas)
     |otherwise = horasNaoTrabalhadas(tail datasComemorativas)
 
+main :: IO()
+main = do
+    let dataAtual = (09,02,2022)
+    let natal = Comemorativa "Natal" True True 25 12
+    print (comparaDataComemorativa dataAtual natal)
+    let colecaoDatas = inserir natal colecaoDatas
+    print (horasNaoTrabalhadas colecaoDatas)
